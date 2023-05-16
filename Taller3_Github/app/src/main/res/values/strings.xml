@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">Taller3</string>
+    <string name="email">Ingresa tu email</string>
+    <string name="password">Ingresa tu contraseña</string>
+    <string name="register">Register</string>
+    <string name="login">Login</string>
+    <string name="click_login">Click to login</string>
+    <string name="click_register">Click to register</string>
+    <string name="logout">Logout</string>
 </resources>
