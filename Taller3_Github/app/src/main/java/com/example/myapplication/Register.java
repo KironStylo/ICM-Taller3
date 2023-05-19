@@ -26,6 +26,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.myapplication.Model.DatabasePaths;
+import com.example.myapplication.Model.User;
 import com.example.myapplication.databinding.ActivityRegisterBinding;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.CommonStatusCodes;
@@ -42,11 +44,17 @@ import com.google.android.gms.location.Priority;
 import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -63,11 +71,13 @@ public class Register extends AppCompatActivity {
     private ImageView imagen;
     private Button obtenerGaleria;
 
+
     // Datos para registrar el usuario
     private TextInputEditText editTextEmail, editTextPassword;
+    private TextInputEditText editTextNombre, editTextApellido, editTextID;
+
     // Boton para registrar el usuario
     private Button btnReg;
-
 
     //Lista de permisos requeridos
     private final String[] PERMISOS_REQUERIDOS = new String[]{
@@ -91,15 +101,33 @@ public class Register extends AppCompatActivity {
     private Location mLocation;
 
 
+    // Datos del usuario
+    String nombre, email, apellido, password;
+    Long identificacion;
+    // Datos de la localizacion
+    private Double latitud, longitud;
 
     // Autenticacion de Firebase
     private FirebaseAuth mAuth;
+
+    // Variables de Firebase
+    FirebaseDatabase database;
+    DatabaseReference myRef;
+
+    private StorageReference mStorageRef;
+
+    // Variable URI de la imagen
+    Uri imageUri;
+
+
+
 
     // Se declara un objeto para mostrar una barra de progreso cuando se hace sign-in
     ProgressBar progressBar;
 
     // Se declara un objeto de texto como un hiperenlace para entrar a la otra pantalla
     TextView textView;
+
 
     // Acción de la aplicación al inicio si el usuario ya se habia autenticado
     @Override
@@ -124,6 +152,9 @@ public class Register extends AppCompatActivity {
         // Fijar los componentes
         editTextEmail = binding.email;
         editTextPassword = binding.password;
+        editTextNombre = binding.name;
+        editTextApellido = binding.apellido;
+        editTextID = binding.ID;
         btnReg = binding.btnRegister;
         textView = binding.loginNow;
         imagen = binding.contacto;
@@ -135,6 +166,13 @@ public class Register extends AppCompatActivity {
 
         // Se inicializa el Firebase Auth
         mAuth = FirebaseAuth.getInstance();
+
+        // Se fija el valor de la base de datos
+        database = FirebaseDatabase.getInstance();
+        myRef = database.getReference();
+
+        // Se fija el valor del almacenamiento de Firebase
+        mStorageRef = FirebaseStorage.getInstance().getReference();
 
         // Se crea la solicitud de subscripción a servicios
         mLocationRequest = createLocationRequest();
@@ -152,6 +190,8 @@ public class Register extends AppCompatActivity {
                 logger.info("Location update in the callback: " + location);
                 if (location != null) {
                     logger.info("En localizacion exitosa");
+                    latitud = location.getLatitude();
+                    longitud = location.getLongitude();
                     logger.info(String.valueOf(location.getLatitude()));
                     logger.info(String.valueOf(location.getLongitude()));
                     logger.info(String.valueOf(location.getAltitude()));
@@ -184,23 +224,29 @@ public class Register extends AppCompatActivity {
                 @Override
                 public void onClick(View view) {
                     progressBar.setVisibility(View.VISIBLE);
-                    String email, password;
                     email = String.valueOf(editTextEmail.getText());
                     password = String.valueOf(editTextPassword.getText());
-                    if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
+                    nombre = String.valueOf(editTextNombre.getText());
+                    apellido = String.valueOf(editTextApellido.getText());
+                    identificacion = Long.valueOf(String.valueOf(editTextID.getText()));
+
+                    if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password) || TextUtils.isEmpty(nombre)
+                            || TextUtils.isEmpty(apellido) || TextUtils.isEmpty(String.valueOf(identificacion))
+                            || TextUtils.isEmpty(String.valueOf(latitud)) || TextUtils.isEmpty(String.valueOf(longitud))) {
                         Toast.makeText(Register.this, "No deje campo de textos vacios\n", Toast.LENGTH_SHORT).show();
                     } else {
-                        createUserWithEmailandPassword(email, password);
+                        createUserWithEmailandPassword(email,password);
+
                     }
                 }
             });
-
         }
         else{
             // Se pide al usuario autorizar los permisos
             ActivityCompat.requestPermissions(Register.this,PERMISOS_REQUERIDOS,CODIGO_PERMISOS);
         }
     }
+
 
     // Se registra el correo y contraseña ingresada a la aplicación
     public void createUserWithEmailandPassword(String email, String password) {
@@ -210,6 +256,11 @@ public class Register extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 if (task.isSuccessful()) {
                     // Si es exitosa la creacion de la cuenta
+                    // Se crea el usuario con datos a almacenar
+                    createUser();
+                    // Se guarda la imagen de contacto en firebase
+                    uploadFile();
+                    // Se limpian los datos previamente ingresados
                     Toast.makeText(Register.this, "Cuenta creada.", Toast.LENGTH_SHORT).show();
                 } else {
                     // If sign in fails, display a message to the user.
@@ -217,6 +268,31 @@ public class Register extends AppCompatActivity {
                 }
             }
         });
+    }
+    private void uploadFile(){
+        String fileName = mAuth.getCurrentUser().getUid();
+        StorageReference imageRef = FirebaseStorage.getInstance().
+                getReference(DatabasePaths.IMAGEN+fileName);
+        imageRef.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+            @Override
+            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                Toast.makeText(Register.this,"Imagen del contacto generada",Toast.LENGTH_LONG);
+            }
+        });
+    }
+
+
+    private void createUser(){
+        User user = new User();
+        user.setNombre(nombre);
+        user.setApellido(apellido);
+        user.setIdentificacion(identificacion);
+        user.setLongitud(longitud);
+        user.setLatitiud(latitud);
+        user.setDisponible(false);
+        String key = myRef.push().getKey();
+        myRef = database.getReference(DatabasePaths.USERS + key);
+        myRef.setValue(user);
     }
 
     // Funciones para asegurar que se han obtenido los permisos del usuario
@@ -246,7 +322,7 @@ public class Register extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == ID_LOAD_IMAGE && resultCode == RESULT_OK){
-            final Uri imageUri = data.getData();
+            imageUri = data.getData();
             try {
                 final InputStream imageStream = getContentResolver().openInputStream(imageUri);
                 final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);

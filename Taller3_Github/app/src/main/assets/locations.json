@@ -1,0 +1,29 @@
+{
+  "locations" :[
+    {
+        "latitude" : 4.660557,
+        "longitude" : -74.090749,
+        "name" : "Parque Simón Bolivar"
+    },
+    {
+        "latitude" : 4.628308,
+        "longitude" : -74.064929,
+        "name" : "Pontificia Universidad Javeriana"
+    },
+    {
+        "latitude" : 4.596862,
+        "longitude" : -74.072810,
+        "name" : "Biblioteca Luis Angel Arango"
+    },
+    {
+        "latitude" : 4.651711,
+        "longitude" : -74.055819,
+        "name" : "Zona Gastronómica de Bogotá"
+    },
+    {
+        "latitude" : 4.695177,
+        "longitude" : -74.030930,
+        "name" : "Usaquen"
+    }
+  ]
+}
