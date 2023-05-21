@@ -10,16 +10,11 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".MapsActivity"
-        tools:layout="@layout/activity_maps"
+        tools:context=".Posicion"
+        tools:layout="@layout/activity_posicion"
         ></androidx.fragment.app.FragmentContainerView>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/correo"
-        android:text=""
-        ></TextView>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -29,25 +24,12 @@
         android:layout_marginTop="16dp"
         android:gravity="center"
         android:background="@drawable/roundedbox">
-        <Button
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/logout"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/Persian_Blue"
-            android:drawableLeft="@android:drawable/ic_menu_search"
-            android:layout_weight="0.30"
-            android:onClick="logout"
-            tools:ignore="OnClick"/>
-        <Spinner
-            android:id="@+id/spinner_opciones"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:spinnerMode="dropdown"
-            android:entries="@array/opciones"
-            android:layout_marginLeft="10dp"
-            android:backgroundTint="@color/Persian_Blue"
-            ></Spinner>
+            android:id="@+id/correo"
+            android:text=""
+            ></TextView>
     </LinearLayout>
 
 </FrameLayout>

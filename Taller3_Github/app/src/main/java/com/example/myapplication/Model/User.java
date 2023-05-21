@@ -1,14 +1,18 @@
 package com.example.myapplication.Model;
 
 
+import android.widget.ImageView;
 
 public class User {
     private String nombre;
     private String apellido;
     private Long identificacion;
     private Double longitud;
-    private Double latitiud;
+
+
+    private Double latitud;
     private boolean disponible;
+
 
     public User(){
 
@@ -46,13 +50,14 @@ public class User {
         this.longitud = longitud;
     }
 
-    public Double getLatitiud() {
-        return latitiud;
+    public Double getLatitud() {
+        return latitud;
     }
 
-    public void setLatitiud(Double latitiud) {
-        this.latitiud = latitiud;
+    public void setLatitud(Double latitud) {
+        this.latitud = latitud;
     }
+
 
     public boolean isDisponible() {
         return disponible;

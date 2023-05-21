@@ -13,13 +13,15 @@ import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.AdapterView;
+import android.util.Log;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.myapplication.Model.DatabasePaths;
 import com.example.myapplication.Model.Localizacion;
+import com.example.myapplication.Model.User;
+import com.example.myapplication.databinding.ActivityMapsBinding;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -41,30 +43,21 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.example.myapplication.databinding.ActivityMapsBinding;
-import com.google.android.gms.tasks.OnCompleteListener;
+import com.example.myapplication.databinding.ActivityPosicionBinding;
 import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.Logger;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class Posicion extends FragmentActivity implements OnMapReadyCallback {
 
     // Trazabilidad de la aplicacion con un logger
     private static final String TAG = MapsActivity.class.getName();
@@ -79,8 +72,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // Se declara la variable de Firebase
     private FirebaseAuth mAuth;
-
-    private DatabaseReference reference;
+    // Variables de Firebase
+    FirebaseDatabase database;
+    DatabaseReference myRef;
+    FirebaseUser currentUser;
 
     // Es la información traida de Firebase
     TextView textView;
@@ -91,12 +86,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Marker mMarker;
 
 
+    // UID del otro usuario
+    String oUID;
+
+    // El marcador del otro usuario
+    Marker oMarker;
+
+    // Localizacion del otro usuario
+    Location oLocation;
+
+    // Nombre del otro usuario
+    String oNombre;
+
     // Permiso de localizacion fina en cadena de texto
     String fineLocationPerm = Manifest.permission.ACCESS_FINE_LOCATION;
 
     //Identificador de los permisos
-    private final int LOCATION_PERMISSION_ID = 103;
-    private final int REQUEST_CHECK_SETTINGS = 201;
+    private final int LOCATION_PERMISSION_ID = 124;
+    private final int REQUEST_CHECK_SETTINGS = 123;
 
     //Variables de localizacion
     private FusedLocationProviderClient mFusedLocationClient;
@@ -106,44 +113,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // Localizacion del usuario
     Location mLocation;
 
-    boolean disponible;
+
 
     // Variable de Google Map
     private GoogleMap mMap;
-    private ActivityMapsBinding binding;
+    private ActivityPosicionBinding binding;
 
-    // Localizaciones del Archivo.
-    private ArrayList<Localizacion> localizaciones;
 
-    // Se agregaron las localizaciones del Archivo
-    private boolean agregadas = false;
 
-    // Spinner de las opciones disponibles
-    private Spinner spinner;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        binding = ActivityMapsBinding.inflate(getLayoutInflater());
+        binding = ActivityPosicionBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Se traen los componentes de la interfaz para editarlos
+        textView = binding.correo;
 
         // Se obtiene la instancia de Firebase Auth
         mAuth = FirebaseAuth.getInstance();
 
-        // Se traen los componentes de la interfaz para editarlos
-        textView = binding.correo;
-        spinner = binding.spinnerOpciones;
-
-        // Se asigna a la variable el usuario actual
         user = mAuth.getCurrentUser();
 
+        // Se obtiene la instancia de Firebase database
+        database = FirebaseDatabase.getInstance();
+
+        myRef = database.getReference();
 
         // Si el usuario no existe, se devuelve a la pantalla de login
         if(user == null){
-            Intent intent = new Intent(MapsActivity.this, Login.class);
+            Intent intent = new Intent(Posicion.this, Login.class);
+            mAuth.signOut();
             startActivity(intent);
         }
         else{
@@ -160,44 +163,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         // Se hace solicitud de permiso de usar la localizacion
-        requestPermission(this,fineLocationPerm,"Se requiere permiso de localizacion",LOCATION_PERMISSION_ID);
+        requestPermission(this, fineLocationPerm, "Se requiere permiso de localizacion", LOCATION_PERMISSION_ID);
 
-        // Se tiene un listener que escucha la opcion que el usuario ha seleccionado para actualizar la base de datos
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
-                // El item seleccionado
-                String selected_item = adapterView.getItemAtPosition(position).toString();
-                logger.info("Item seleccionado: " + selected_item);
-                Toast.makeText(MapsActivity.this, "Item seleccionado "+ selected_item,Toast.LENGTH_LONG).show();
-                switch(selected_item){
-                    case "Conectarse":
-                    {
-                        String llave = mAuth.getCurrentUser().getUid();
-                        disponible = true;
-                        updateEstado(llave,disponible);
-                        break;
-                    }
-                    case "Desconectarse":{
-                        String llave = mAuth.getCurrentUser().getUid();
-                        disponible = false;
-                        updateEstado(llave,disponible);
-                        break;
-                    }
-                    case "Ver Disponibles":{
-                        Intent intent = new Intent(MapsActivity.this,UserActivity.class);
-                        startActivity(intent);
-                        break;
-                    }
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-
-        });
         mLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
@@ -210,22 +177,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     logger.info(String.valueOf(location.getLongitude()));
                     logger.info(String.valueOf(location.getAltitude()));
 
-                    // Se actualiza el valor de longitud y latitud
-                    String llave = mAuth.getCurrentUser().getUid();
-                    updateLocation(llave);
 
                     // Obtain the SupportMapFragment and get notified when the map is ready to be used.
                     SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                             .findFragmentById(R.id.map);
-                    mapFragment.getMapAsync(MapsActivity.this);
+                    mapFragment.getMapAsync(Posicion.this);
 
 
                 }
             }
         };
     }
-
-
 
     /**
      * Manipulates the map once available.
@@ -238,113 +200,90 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-
         mMap = googleMap;
 
-        // Se agregan los marcadores al mapa
-        if(!agregadas) {
-            try {
-                leerArchivoJSON();
+        // Se halla la distancia entre los dos localizaciones
+        float distance = mLocation.distanceTo(oLocation);
+        textView.setText("La distancia entre ustedes es: " + distance/1000 + " KM");
 
-                for (int i = 0; i < localizaciones.size(); i++) {
-                    LatLng latLng = new LatLng(localizaciones.get(i).getLatitud(),
-                            localizaciones.get(i).getLongitud());
-                    mMap.addMarker(new MarkerOptions().position(latLng).title(localizaciones.get(i).getNombre()));
-                }
-                agregadas = true;
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
+        // Marcador del usuario
         LatLng user = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
-        if(mMarker == null) {
+        if (mMarker == null) {
             mMarker = mMap.addMarker(new MarkerOptions().position(user)
                     .title("Tu ubicación")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
-        }
-        else{
+        } else {
             mMarker.setPosition(user);
         }
-        if(acercamiento){
+        if (acercamiento) {
             mMap.moveCamera(CameraUpdateFactory.newLatLng(user));
             mMap.moveCamera(CameraUpdateFactory.zoomTo(10));
             acercamiento = false;
         }
+
+        LatLng oUser = new LatLng(oLocation.getLatitude(),oLocation.getLongitude());
+        if(oMarker == null){
+            oMarker = mMap.addMarker(new MarkerOptions().position(oUser)
+                    .title("La ubicación del otro usuario")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+        }
+        else{
+            oMarker.setPosition(oUser);
+
+        }
+
+
+
     }
 
-    // Actualizar los datos de localización del usuario
-    private void updateLocation(String llave) {
-        reference = FirebaseDatabase.getInstance().getReference("users");
-        reference.child(llave)
-                .child("latitud")
-                .setValue(mLocation.getLatitude());
-        reference.child(llave)
-                .child("longitud")
-                .setValue(mLocation.getLongitude());
-    }
 
-    // Actualizar el estado del usuario
-    private void updateEstado(String llave, boolean estado) {
-        HashMap map = new HashMap();
-        map.put("disponible",estado);
-        reference = FirebaseDatabase.getInstance().getReference("users");
-        reference.child(llave)
-                .updateChildren(map).addOnSuccessListener(new OnSuccessListener() {
-                    @Override
-                    public void onSuccess(Object o) {
-                        Toast.makeText(MapsActivity.this,"Se actualizo disponible",Toast.LENGTH_LONG).show();
+    // Funcion para cargar el usuario disponible
+    public void loadUsers() {
+        myRef = database.getReference(DatabasePaths.USERS);
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Log.i(TAG,"Entro aqui a la funcion parte 1");
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    User myUser = snapshot.getValue(User.class);
+                    Log.i(TAG,"Entra al usuario con ID"+snapshot.getKey() + " y UID del otro usuario "+oUID);
+                    if(snapshot.getKey().equals(oUID)){
+                        Log.i(TAG,"Son iguales");
+                        oLocation = new Location("Nuevo provedor");
+                        Log.i(TAG,"Nombre del usuario: "+myUser.getNombre());
+                        Log.i(TAG,"Localizacion del otro usuario "+ myUser.getLatitud() + " " + myUser.getLongitud());
+                        oNombre = myUser.getNombre();
+                        oLocation.setLongitude(myUser.getLongitud());
+                        oLocation.setLatitude(myUser.getLatitud());
+                        break;
                     }
-                });
-
-    }
-
-    // Leer del archivo JSON
-    public void leerArchivoJSON() throws JSONException {
-        localizaciones = new ArrayList<>();
-        try {
-            JSONObject jsonFile = loadLocationsFromJson();
-            JSONArray locations = jsonFile.getJSONArray("locations");
-            for (int i = 0; i < locations.length(); i++) {
-                String nombre = locations.getJSONObject(i).getString("name");
-                Double latitud = locations.getJSONObject(i).getDouble("latitude");
-                Double longitud = locations.getJSONObject(i).getDouble("longitude");
-                logger.info("Mensaje " +nombre+""+latitud+""+longitud);
-                localizaciones.add(new Localizacion(nombre,latitud,longitud));
+                }
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.w(TAG, "error en la consulta", databaseError.toException());
+            }
+        });
     }
 
-    public String loadJSONFromAsset(String assetName) {
-        String json = null;
-        try {
-            InputStream is = this.getAssets().open(assetName);
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            json = new String(buffer, "UTF-8");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            return null;
-        }
-        return json;
-    }
+     // Funciones de inicio
+     @Override
+     protected void onStart() {
+         super.onStart();
+         // Se obtiene la instancia de Firebase database
+         database = FirebaseDatabase.getInstance();
+         myRef = database.getReference();
 
-    public JSONObject loadLocationsFromJson() throws JSONException {
-        return new JSONObject(loadJSONFromAsset(LOCATIONS_FILE));
-    }
-
-    // Funcion para salir de la cuenta
-    public void logout(View view){
-        mAuth.signOut();
-        // Se devuelve al usuario a la pantalla de inicio de sesion
-        Intent intent = new Intent(MapsActivity.this,Login.class);
-        startActivity(intent);
-    }
+         // Se fija el valor del UID obtenido del usuario pasado por el Intent
+         oUID = getIntent().getStringExtra("UID");
+         textView.setText(oUID);
+         Log.i(TAG,"Este el UID del usuario:  "+oUID);
+         currentUser = mAuth.getCurrentUser();
+         if(currentUser == null) {
+             logout();
+         }
+         loadUsers();
+     }
     // Funciones para ubicar al usuario en el mapa:
 
     // Al salir de la aplicacion sin cerrarla
@@ -416,9 +355,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         turnOnLocationAndStartUpdates();
     }
 
-
-
-
     //Se prenden los servicios y las actualizaciones
     private void turnOnLocationAndStartUpdates() {
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(mLocationRequest);
@@ -437,7 +373,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         try {
                             // Show the dialog by calling startResolutionForResult(), and check the result in onActivityResult()
                             ResolvableApiException resolvable = (ResolvableApiException) e;
-                            resolvable.startResolutionForResult(MapsActivity.this, REQUEST_CHECK_SETTINGS);
+                            resolvable.startResolutionForResult(Posicion.this, REQUEST_CHECK_SETTINGS);
                         } catch (IntentSender.SendIntentException sendEx) {
                             // Ignore the error
                         }
@@ -463,4 +399,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
     }
+    private void logout() {
+        mAuth.signOut();
+        Intent intent = new Intent(Posicion.this, Login.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+    }
+
+
 }

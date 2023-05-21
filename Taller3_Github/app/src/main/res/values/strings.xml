@@ -11,4 +11,12 @@
     <string name="apellido">Ingresa tu apellido</string>
     <string name="ingresar_ID">Ingresa tu ID</string>
     <string name="title_activity_maps">MapsActivity</string>
+    <string name="ver_posicion">Ver posicion</string>
+    <string-array name="opciones">
+        <item>Seleccionar</item>
+        <item>Conectarse</item>
+        <item>Desconectarse</item>
+        <item>Ver Disponibles</item>
+    </string-array>
+    <string name="title_activity_posicion">Posicion</string>
 </resources>

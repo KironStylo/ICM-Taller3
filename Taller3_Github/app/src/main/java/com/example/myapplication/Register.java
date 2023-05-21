@@ -288,9 +288,9 @@ public class Register extends AppCompatActivity {
         user.setApellido(apellido);
         user.setIdentificacion(identificacion);
         user.setLongitud(longitud);
-        user.setLatitiud(latitud);
+        user.setLatitud(latitud);
         user.setDisponible(false);
-        String key = myRef.push().getKey();
+        String key = mAuth.getCurrentUser().getUid();
         myRef = database.getReference(DatabasePaths.USERS + key);
         myRef.setValue(user);
     }

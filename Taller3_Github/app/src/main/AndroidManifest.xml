@@ -37,6 +37,13 @@
             android:value="${MAPS_API_KEY}" />
 
         <activity
+            android:name=".Posicion"
+            android:exported="false"
+            android:label="@string/title_activity_posicion" />
+        <activity
+            android:name=".UserActivity"
+            android:exported="false" />
+        <activity
             android:name=".MapsActivity"
             android:exported="false"
             android:label="@string/title_activity_maps" />
@@ -54,7 +61,7 @@
         </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="true"></activity>
+            android:exported="true" />
     </application>
 
 </manifest>
