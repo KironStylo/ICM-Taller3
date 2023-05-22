@@ -1,24 +1,22 @@
 package com.example.myapplication;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.Adapters.UserAdapter;
 import com.example.myapplication.Model.DatabasePaths;
 import com.example.myapplication.Model.User;
 import com.example.myapplication.Model.Usuario;
-import com.example.myapplication.databinding.ActivityUserBinding;
-import com.google.android.gms.auth.api.signin.internal.Storage;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -30,9 +28,7 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Objects;
 
 public class UserActivity extends AppCompatActivity {
 
@@ -47,6 +43,8 @@ public class UserActivity extends AppCompatActivity {
     FirebaseDatabase database;
     DatabaseReference myRef;
 
+    StorageReference mStorageRef;
+
 
 
     // Variables para mostrar una vista de la lista adaptada con los datos
@@ -54,7 +52,12 @@ public class UserActivity extends AppCompatActivity {
     ArrayList<Usuario> userLocal = new ArrayList<>();
     ListView listView;
 
-    ImageView imageView;
+    // Imagen de contacto del usuario
+    Bitmap foto;
+    String nombreUsuario;
+    String usuarioUID;
+
+    ImageView imagen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +69,8 @@ public class UserActivity extends AppCompatActivity {
         // Initialize Firebase database
         database = FirebaseDatabase.getInstance();
         myRef = database.getReference();
+        // Initializa Firebase Storage
+        mStorageRef = FirebaseStorage.getInstance().getReference(DatabasePaths.IMAGEN);
 
         // Initialize Adapter
         adapter = new UserAdapter(UserActivity.this, userLocal);
@@ -122,6 +127,9 @@ public class UserActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
+
+
+
 
 
 

@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
@@ -20,6 +21,7 @@ import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -172,7 +174,7 @@ public class Register extends AppCompatActivity {
         myRef = database.getReference();
 
         // Se fija el valor del almacenamiento de Firebase
-        mStorageRef = FirebaseStorage.getInstance().getReference();
+        mStorageRef = FirebaseStorage.getInstance().getReference(DatabasePaths.IMAGEN);
 
         // Se crea la solicitud de subscripción a servicios
         mLocationRequest = createLocationRequest();
@@ -269,16 +271,24 @@ public class Register extends AppCompatActivity {
             }
         });
     }
+
+
+    private String getFileExtension(Uri uri){
+        ContentResolver cR = getContentResolver();
+        MimeTypeMap mime = MimeTypeMap.getSingleton();
+        return mime.getExtensionFromMimeType(cR.getType(uri));
+    }
     private void uploadFile(){
-        String fileName = mAuth.getCurrentUser().getUid();
-        StorageReference imageRef = FirebaseStorage.getInstance().
-                getReference(DatabasePaths.IMAGEN+fileName);
-        imageRef.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-            @Override
-            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                Toast.makeText(Register.this,"Imagen del contacto generada",Toast.LENGTH_LONG);
-            }
-        });
+        if(imageUri != null){
+            String fileName = mAuth.getCurrentUser().getUid();
+            StorageReference imageRef = mStorageRef.child(fileName);
+            imageRef.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    Toast.makeText(Register.this,"Imagen del contacto generada",Toast.LENGTH_LONG);
+                }
+            });
+        }
     }
 
 

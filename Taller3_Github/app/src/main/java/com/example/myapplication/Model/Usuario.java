@@ -1,8 +1,12 @@
 package com.example.myapplication.Model;
 
+import android.graphics.Bitmap;
+
 public class Usuario {
     private String nombre;
     private String UID;
+
+
 
     public Usuario(String nombre, String UID) {
         this.nombre = nombre;
@@ -19,9 +23,5 @@ public class Usuario {
 
     public String getUID() {
         return UID;
-    }
-
-    public void setUID(String UID) {
-        this.UID = UID;
     }
 }

@@ -20,6 +20,7 @@ import android.widget.Toast;
 
 import com.example.myapplication.Model.DatabasePaths;
 import com.example.myapplication.Model.Localizacion;
+import com.example.myapplication.Model.Unidades;
 import com.example.myapplication.Model.User;
 import com.example.myapplication.databinding.ActivityMapsBinding;
 import com.google.android.gms.common.api.ApiException;
@@ -204,7 +205,15 @@ public class Posicion extends FragmentActivity implements OnMapReadyCallback {
 
         // Se halla la distancia entre los dos localizaciones
         float distance = mLocation.distanceTo(oLocation);
-        textView.setText("La distancia entre ustedes es: " + distance/1000 + " KM");
+
+        // Se declara la clase unidades para referirse a la distancia entre los dos usuarios
+        if(distance > 1000){
+            textView.setText("La distancia entre ustedes es: " + distance/1000 + Unidades.KM);
+        }
+        else if (distance < 1000){
+            textView.setText("La distancia entre ustedes es: " + distance + Unidades.M);
+        }
+
 
         // Marcador del usuario
         LatLng user = new LatLng(mLocation.getLatitude(), mLocation.getLongitude());
@@ -276,7 +285,6 @@ public class Posicion extends FragmentActivity implements OnMapReadyCallback {
 
          // Se fija el valor del UID obtenido del usuario pasado por el Intent
          oUID = getIntent().getStringExtra("UID");
-         textView.setText(oUID);
          Log.i(TAG,"Este el UID del usuario:  "+oUID);
          currentUser = mAuth.getCurrentUser();
          if(currentUser == null) {
