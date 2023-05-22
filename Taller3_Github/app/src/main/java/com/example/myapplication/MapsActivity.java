@@ -185,6 +185,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         break;
                     }
                     case "Ver Disponibles":{
+                        spinner.setSelection(0);
                         Intent intent = new Intent(MapsActivity.this,UserActivity.class);
                         startActivity(intent);
                         break;
