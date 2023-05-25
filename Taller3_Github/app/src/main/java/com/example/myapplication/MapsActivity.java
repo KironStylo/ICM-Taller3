@@ -309,7 +309,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         try {
             String url_foto=generatedFilePath+".jpg";
             logger.info("El URL de la imagen es"+generatedFilePath);
-            String token="AAAAMCzYKOk:APA91bHqCe62JvhGut_zEMibmc_RlVxXTa8cAu4SWdjJd9xOTKKRFg9JUQdLT4y_-Lpc6DjRVKVNj8TBXd6e1o5cRe9jnH0bAG_mf1F5P5cVbcmL9vCpd_mYAo6LW_K1A5wVkL3iOS8Y";
+            String token="";
             logger.info("El token del servicio es " + token);
             json.put("to","/topics/"+"enviaratodos");
             JSONObject notificacion=new JSONObject();
