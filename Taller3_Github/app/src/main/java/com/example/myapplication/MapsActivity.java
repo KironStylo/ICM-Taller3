@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -19,6 +20,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.example.myapplication.Model.DatabasePaths;
 import com.example.myapplication.Model.Localizacion;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.CommonStatusCodes;
@@ -51,6 +57,9 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -81,6 +90,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FirebaseAuth mAuth;
 
     private DatabaseReference reference;
+
+    private StorageReference mStorageRef;
 
     // Es la información traida de Firebase
     TextView textView;
@@ -120,6 +131,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // Spinner de las opciones disponibles
     private Spinner spinner;
+    private String generatedFilePath;
 
 
     @Override
@@ -140,6 +152,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Se asigna a la variable el usuario actual
         user = mAuth.getCurrentUser();
 
+        // Initializa Firebase Storage
+        mStorageRef = FirebaseStorage.getInstance().getReference(DatabasePaths.IMAGEN);
+
 
         // Si el usuario no existe, se devuelve a la pantalla de login
         if(user == null){
@@ -151,6 +166,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             textView.setText(user.getEmail());
         }
 
+
+        // Se suscribe al usuario al servicio de notificaciones para que reciban notificaciones de cualquier usuario.
+        FirebaseMessaging.getInstance().subscribeToTopic("enviaratodos").addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                Toast.makeText(MapsActivity.this,"Registrado",Toast.LENGTH_SHORT).show();
+            }
+        });
 
 
         // Se crea la solicitud de subscripción a servicios
@@ -176,6 +199,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         String llave = mAuth.getCurrentUser().getUid();
                         disponible = true;
                         updateEstado(llave,disponible);
+                        // Se lanza la notificacion a los demas usuarios que tengan la aplicacion
+                        logger.info("Se va a hacer una notificacion para los demas usuarios");
+                        downloadImage();
                         break;
                     }
                     case "Desconectarse":{
@@ -272,6 +298,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.moveCamera(CameraUpdateFactory.zoomTo(10));
             acercamiento = false;
         }
+    }
+
+    // Hacer el envio de notificacion de que un usuario esta disponible
+    private void llamartopico() {
+
+        RequestQueue myrequest= Volley.newRequestQueue(getApplicationContext());
+        JSONObject json = new JSONObject();
+
+        try {
+            String url_foto=generatedFilePath+".jpg";
+            logger.info("El URL de la imagen es"+generatedFilePath);
+            String token="AAAAMCzYKOk:APA91bHqCe62JvhGut_zEMibmc_RlVxXTa8cAu4SWdjJd9xOTKKRFg9JUQdLT4y_-Lpc6DjRVKVNj8TBXd6e1o5cRe9jnH0bAG_mf1F5P5cVbcmL9vCpd_mYAo6LW_K1A5wVkL3iOS8Y";
+            logger.info("El token del servicio es " + token);
+            json.put("to","/topics/"+"enviaratodos");
+            JSONObject notificacion=new JSONObject();
+            notificacion.put("titulo","Usuario de la aplicacion conectado");
+            notificacion.put("detalle","Se ha conectado el usuario: "+mAuth.getCurrentUser().getEmail());
+            notificacion.put("foto",url_foto);
+            notificacion.put("UID",mAuth.getCurrentUser().getUid());
+
+            json.put("data",notificacion);
+            String URL="https://fcm.googleapis.com/fcm/send";
+            JsonObjectRequest request=new JsonObjectRequest(Request.Method.POST,URL,json,null,null){
+                @Override
+                public Map<String, String> getHeaders() {
+                    Map<String,String>header=new HashMap<>();
+                    header.put("content-type","application/json");
+                    header.put("authorization","key="+token);
+                    return  header;
+                }
+            };
+            myrequest.add(request);
+        }catch (JSONException e){
+            e.printStackTrace();
+        }
+    }
+
+    // Se descarga la imagen del usuario asociado a la cuenta
+    private void downloadImage(){
+        StorageReference imageRefl = mStorageRef.child(mAuth.getCurrentUser().getUid());
+        imageRefl.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+            @Override
+            public void onSuccess(Uri uri) {
+                Uri downloadUri = uri;
+                logger.info("La URI es la siguiente"+downloadUri.toString());
+                generatedFilePath = downloadUri.toString();
+                llamartopico();
+            }
+        });
+
     }
 
     // Actualizar los datos de localización del usuario

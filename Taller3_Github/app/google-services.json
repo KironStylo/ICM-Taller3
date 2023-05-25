@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "206910793961",
+    "firebase_url": "https://liszto3-default-rtdb.firebaseio.com",
+    "project_id": "liszto3",
+    "storage_bucket": "liszto3.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:206910793961:android:efc971570b7694c85ba878",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "206910793961-qdb00l60fmfj8rnvhfp9853f5d49nl3v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyzAczvPFGM-3vqCxgR_N8DMBph6qDe-k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "206910793961-qdb00l60fmfj8rnvhfp9853f5d49nl3v.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
